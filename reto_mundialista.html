@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Reto Mundialista — The Good Mark</title>
+<style>
+  /* ── DESIGN TOKENS (TGM Brand System) — reutilizados tal cual ── */
+  :root {
+    --tgm-blue:#1461a1; --tgm-blue-dark:#0d4070; --tgm-blue-light:#2a7ec8;
+    --tgm-glow:rgba(20,97,161,0.35);
+    --navy:#060f1e; --navy-mid:#0b1e38; --navy-card:#0d2545;
+    --white:#ffffff; --w80:rgba(255,255,255,0.80); --w40:rgba(255,255,255,0.40); --w10:rgba(255,255,255,0.07);
+    --gold:#f0c040; --green:#22c55e; --red:#E03C31;
+    --font:'Segoe UI','Helvetica Neue',Arial,sans-serif;
+  }
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html { font-size:16px; }
+  body { font-family:var(--font); background:var(--navy); color:var(--white); min-height:100vh; overflow-x:hidden; user-select:none; }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background:
+      radial-gradient(ellipse 65% 55% at 15% 5%,  rgba(20,97,161,0.20) 0%, transparent 70%),
+      radial-gradient(ellipse 45% 65% at 85% 95%, rgba(20,97,161,0.14) 0%, transparent 70%);
+    pointer-events:none; z-index:0;
+  }
+  #app { position:relative; z-index:1; display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+
+  /* ── HEADER (idéntico al sistema) ── */
+  header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 32px; background:rgba(11,30,56,0.92); backdrop-filter:blur(14px);
+    border-bottom:1px solid rgba(20,97,161,0.35); position:sticky; top:0; z-index:10;
+  }
+  .hd-logo { display:flex; align-items:center; gap:12px; }
+  .hd-logo svg { width:42px; height:26px; }
+  .hd-name { font-size:1.05rem; font-weight:700; color:var(--tgm-blue-light); letter-spacing:0.01em; }
+  .hd-sub { font-size:0.68rem; color:var(--w40); text-transform:uppercase; letter-spacing:0.1em; margin-top:1px; }
+  .score-bar { display:flex; align-items:center; gap:22px; }
+  .pdots { display:flex; gap:7px; }
+  .pd { width:11px; height:11px; border-radius:50%; background:var(--w10); border:1.5px solid var(--w40); transition:background .3s, border-color .3s, box-shadow .3s; }
+  .pd.done { background:var(--tgm-blue); border-color:var(--tgm-blue); }
+  .pd.current { background:var(--gold); border-color:var(--gold); box-shadow:0 0 9px var(--gold); }
+
+  /* ── MAIN + SCREENS (idéntico al sistema) ── */
+  main { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px 18px; width:100%; overflow-y:auto; min-height:0; }
+  .screen { display:none; width:100%; max-width:640px; animation:fadeUp .45s ease; }
+  .screen.active { display:flex; flex-direction:column; align-items:center; }
+  #screen-game.screen { max-width:720px; height:100%; gap:16px; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes popIn { from{opacity:0;transform:scale(.85)} to{opacity:1;transform:scale(1)} }
+
+  /* ── BOTONES PÍLDORA (idénticos al sistema) ── */
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:13px 28px; border-radius:50px; border:none; font-family:var(--font); font-size:.95rem; font-weight:700; cursor:pointer; transition:transform .15s, box-shadow .15s, opacity .15s; letter-spacing:.02em; }
+  .btn:active { transform:scale(0.95); }
+  .btn:disabled { opacity:.38; cursor:not-allowed; transform:none !important; }
+  .btn-primary { background:linear-gradient(135deg, var(--tgm-blue-light), var(--tgm-blue)); color:var(--white); box-shadow:0 4px 22px var(--tgm-glow); }
+  .btn-primary:hover { box-shadow:0 6px 30px rgba(20,97,161,0.6); transform:translateY(-2px); }
+  .btn-next { background:linear-gradient(135deg, var(--tgm-blue-light), var(--tgm-blue)); color:var(--white); box-shadow:0 4px 22px var(--tgm-glow); }
+  .btn-next:hover:not(:disabled) { box-shadow:0 6px 30px rgba(20,97,161,0.6); transform:translateY(-2px); }
+  .btn-mark { background:rgba(255,255,255,0.10); color:var(--w80); border:1.5px solid rgba(255,255,255,0.22); }
+  .btn-mark:hover:not(:disabled) { color:var(--white); }
+  .btn-mark.mark-correct.selected { background:linear-gradient(135deg,#22c55e,#15803d); color:var(--white); border-color:transparent; outline:2px solid rgba(255,255,255,0.65); outline-offset:3px; }
+  .btn-mark.mark-wrong.selected { background:linear-gradient(135deg,var(--red),#a82a22); color:var(--white); border-color:transparent; outline:2px solid rgba(255,255,255,0.65); outline-offset:3px; }
+
+  /* ── PANTALLA DE ESPERA / ATRACTOR (mismo estilo que #screen-title del sistema) ── */
+  #screen-idle { text-align:center; }
+  .intro-infinity { margin-bottom:22px; }
+  .intro-infinity svg { width:108px; height:66px; }
+  .title-label { font-size:0.72rem; letter-spacing:0.2em; color:var(--tgm-blue-light); text-transform:uppercase; margin-bottom:14px; font-weight:600; }
+  .title-main { font-size:clamp(2.2rem,7vw,4rem); font-weight:900; line-height:1.04; letter-spacing:-0.02em; margin-bottom:16px; }
+  .title-main span { color:var(--tgm-blue-light); }
+  .title-sub { font-size:1.05rem; color:var(--w80); margin-bottom:34px; line-height:1.5; max-width:560px; }
+
+  /* ── PREGUNTA ── */
+  .round-lbl { display:flex; align-items:center; justify-content:center; }
+  .game-counter { font-size:0.8rem; letter-spacing:0.12em; color:var(--w40); text-transform:uppercase; }
+  .game-counter span { color:var(--gold); font-weight:800; }
+
+  .quiz-layout { flex:1; display:flex; flex-direction:column; gap:18px; width:100%; min-height:0; }
+  .quiz-top { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:14px; width:100%; }
+  .quiz-answers { flex:1; display:flex; gap:14px; width:100%; min-height:180px; }
+  .side-panel { flex:1 1 0; min-width:0; border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:18px; box-shadow:0 20px 60px rgba(0,0,0,0.4); transition:transform .15s, box-shadow .15s; }
+  .side-panel.panel-false { background:linear-gradient(160deg, rgba(224,60,49,0.22), rgba(224,60,49,0.05)); border:2px solid var(--red); }
+  .side-panel.panel-true { background:linear-gradient(160deg, rgba(34,197,94,0.22), rgba(34,197,94,0.05)); border:2px solid var(--green); }
+  .side-icon { font-size:clamp(2.6rem,9vh,6rem); line-height:1; font-weight:900; }
+  .side-label { font-size:clamp(1.2rem,4vh,2.3rem); font-weight:900; text-transform:uppercase; letter-spacing:0.02em; overflow-wrap:break-word; word-break:break-word; text-align:center; max-width:100%; }
+  .side-hint { font-size:clamp(0.8rem,2.1vh,1.1rem); opacity:.9; text-align:center; line-height:1.35; font-weight:600; max-width:92%; }
+  .panel-false .side-icon, .panel-false .side-label { color:var(--red); }
+  .panel-true .side-icon, .panel-true .side-label { color:var(--green); }
+
+  .billboard-wrap { width:100%; display:flex; align-items:center; justify-content:center; }
+  .billboard { width:100%; border-radius:20px; overflow:hidden; border:1px solid rgba(20,97,161,0.30); box-shadow:0 24px 70px rgba(0,0,0,0.5); }
+  .billboard-inner { width:100%; display:flex; align-items:center; padding:1.5rem 1.7rem; min-height:130px; position:relative;
+    background:radial-gradient(circle at 20% 0%, rgba(255,255,255,0.10), transparent 60%), linear-gradient(155deg, var(--navy-card), var(--tgm-blue-dark)); color:var(--white); }
+  .billboard-content { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:8px; width:100%; }
+  .bb-eyebrow { font-size:clamp(10px,1.2vw,13px); letter-spacing:0.15em; text-transform:uppercase; opacity:.7; font-weight:600; }
+  .bb-question { font-size:clamp(18px,4vw,28px); font-weight:800; line-height:1.35; }
+
+  .timer-bar-wrap { width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; }
+  .timer-bar { height:100%; background:linear-gradient(90deg,var(--tgm-blue-light),var(--tgm-blue)); border-radius:3px; transition:width 1s linear, background .3s; }
+  .timer-bar.danger { background:var(--red); }
+  .timer-solo { width:100%; display:flex; justify-content:center; }
+  .timer-num { font-size:clamp(24px,6vw,40px); font-weight:900; color:var(--tgm-blue-light); }
+  .timer-num.danger { color:var(--red); }
+
+  /* ── REVELACIÓN (idéntico al sistema) ── */
+  #screen-reveal { width:100%; }
+  .reveal-card { width:100%; max-width:720px; margin:0 auto; border-radius:26px; padding:42px 38px; text-align:center; position:relative; overflow:hidden; max-height:86vh; overflow-y:auto; box-shadow:0 30px 80px rgba(0,0,0,0.55); animation:revealBoom .5s cubic-bezier(0.34,1.56,0.64,1);
+    background:radial-gradient(circle at 30% 0%, rgba(255,255,255,.14), transparent 60%), linear-gradient(155deg, rgba(13,37,69,0.95) 0%, rgba(6,15,30,0.95) 100%); }
+  @keyframes revealBoom { from{opacity:0;transform:scale(.78)} to{opacity:1;transform:scale(1)} }
+  .rev-eyebrow { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.22em; opacity:.8; margin-bottom:10px; }
+  .reveal-brand { font-size:clamp(2.4rem,7vw,4rem); font-weight:900; letter-spacing:-0.02em; line-height:1; margin-bottom:18px; }
+  .reveal-fact { background:rgba(255,255,255,0.12); border-left:3px solid rgba(255,255,255,0.55); padding:14px 20px; font-size:clamp(12px,1.3vw,15px); color:rgba(255,255,255,0.9); line-height:1.6; margin:0 auto 22px; border-radius:0 10px 10px 0; max-width:560px; text-align:left; }
+  .reveal-fact strong { color:#fff; font-weight:700; }
+  .ask-label { font-size:0.78rem; letter-spacing:0.08em; color:rgba(255,255,255,0.7); text-transform:uppercase; margin-bottom:12px; display:block; }
+  .reveal-actions { display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:center; }
+
+  /* ── FINAL (idéntico al sistema) ── */
+  #screen-final { text-align:center; gap:6px; }
+  .trophy { font-size:4.5rem; margin-bottom:6px; }
+  .final-label { font-size:0.72rem; letter-spacing:0.2em; color:var(--tgm-blue-light); text-transform:uppercase; font-weight:600; }
+  .final-score { font-size:clamp(3.5rem,12vw,7rem); font-weight:900; line-height:1; color:var(--gold); }
+  .final-score span { color:var(--w40); font-size:0.32em; text-transform:uppercase; letter-spacing:.06em; }
+  .final-msg { font-size:clamp(14px,1.7vw,19px); color:var(--w80); max-width:520px; line-height:1.5; margin:10px auto 0; }
+  .tgm-banner { width:100%; max-width:560px; background:rgba(20,97,161,0.13); border:1px solid rgba(20,97,161,0.38); border-radius:20px; padding:22px; margin:22px auto; text-align:center; }
+  .tgm-banner p { font-size:0.85rem; color:var(--w80); line-height:1.6; margin-top:8px; }
+
+  /* ── FOOTER + CONFETI (idéntico al sistema) ── */
+  footer { text-align:center; padding:13px; font-size:0.7rem; color:var(--w40); border-top:1px solid rgba(20,97,161,0.14); letter-spacing:0.08em; }
+  footer strong { color:var(--tgm-blue-light); }
+  #confetti { position:fixed; inset:0; pointer-events:none; z-index:999; }
+
+  /* ── RESPONSIVE (mismo breakpoint del sistema) ── */
+  @media (max-width:420px) {
+    header { padding:12px 16px; }
+    main { padding:18px 12px; }
+    .hd-sub { display:none; }
+    .billboard-inner { padding:1.1rem 1.2rem; min-height:110px; }
+    .reveal-card { padding:26px 18px; }
+    .quiz-answers { gap:10px; }
+    .side-panel { padding:12px; gap:8px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+<div id="app">
+
+  <!-- ── HEADER ── -->
+  <header>
+    <div class="hd-logo">
+      <svg viewBox="0 0 90 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M45 27 C36 16,18 10,10 18 C2 26,6 38,18 40 C30 42,40 32,45 27 C50 22,60 12,72 14 C84 16,88 28,80 36 C72 44,54 38,45 27 Z"
+          stroke="#2a7ec8" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <div class="hd-name">The Good Mark</div>
+        <div class="hd-sub">Presenta</div>
+      </div>
+    </div>
+    <div class="score-bar">
+      <div class="pdots" id="pdots"></div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ── PANTALLA DE ESPERA / ATRACTOR ── -->
+    <section id="screen-idle" class="screen active">
+      <div class="intro-infinity">
+        <svg viewBox="0 0 90 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M45 27 C36 16,18 10,10 18 C2 26,6 38,18 40 C30 42,40 32,45 27 C50 22,60 12,72 14 C84 16,88 28,80 36 C72 44,54 38,45 27 Z"
+            stroke="#2a7ec8" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="title-label">The Good Mark presenta</div>
+      <div class="title-main">RETO<br><span>MUNDIALISTA</span></div>
+      <div class="title-sub">Verdadero o falso: pon a prueba lo que sabes de la Copa del Mundo. Cuando aparezca la pregunta, brinca a la izquierda o a la derecha para responder.</div>
+      <button class="btn btn-primary" onclick="startGame()">Toca para jugar</button>
+    </section>
+
+    <!-- ── PANTALLA DE PREGUNTA (formato vertical) ── -->
+    <section id="screen-game" class="screen">
+      <div class="round-lbl">
+        <div class="game-counter" id="q-counter">Pregunta <span>1</span> de 7</div>
+      </div>
+      <div class="quiz-layout">
+        <div class="quiz-top">
+          <div class="billboard-wrap">
+            <div class="billboard">
+              <div class="billboard-inner">
+                <div class="billboard-content">
+                  <div class="bb-eyebrow">Copa del Mundo</div>
+                  <div class="bb-question" id="bb-question-text">Cargando pregunta…</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="timer-bar-wrap"><div class="timer-bar" id="timer-bar"></div></div>
+          <div class="timer-solo"><div class="timer-num" id="timer-num">12</div></div>
+        </div>
+        <div class="quiz-answers">
+          <div class="side-panel panel-false">
+            <div class="side-icon">✕</div>
+            <div class="side-label">Falso</div>
+            <div class="side-hint">🡄 Brinca aquí si es falso</div>
+          </div>
+          <div class="side-panel panel-true">
+            <div class="side-icon">✔</div>
+            <div class="side-label">Verdadero</div>
+            <div class="side-hint">Brinca aquí si es verdadero 🡆</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── PANTALLA DE REVELACIÓN ── -->
+    <section id="screen-reveal" class="screen">
+      <div class="reveal-card">
+        <div class="rev-eyebrow">Resultado</div>
+        <div class="reveal-brand" id="reveal-answer">VERDADERO</div>
+        <div class="reveal-fact" id="reveal-fact"><strong>Dato curioso:</strong> …</div>
+        <span class="ask-label">¿El público acertó?</span>
+        <div class="reveal-actions">
+          <button class="btn btn-mark mark-correct" id="btn-mark-correct" onclick="markResult(true)">✔ Acertaron</button>
+          <button class="btn btn-mark mark-wrong" id="btn-mark-wrong" onclick="markResult(false)">✘ Fallaron</button>
+        </div>
+        <div class="reveal-actions" style="margin-top:20px;">
+          <button class="btn btn-next" id="btn-next-reveal" disabled onclick="goNext()">Siguiente pregunta →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── PANTALLA FINAL ── -->
+    <section id="screen-final" class="screen">
+      <div class="trophy">🏆⚽</div>
+      <div class="final-label">Reto Mundialista · The Good Mark</div>
+      <div class="final-score" id="final-score">0<span>de 7 correctas</span></div>
+      <div class="final-msg" id="final-msg"></div>
+      <div class="tgm-banner">
+        <div class="hd-logo" style="justify-content:center;">
+          <svg viewBox="0 0 90 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M45 27 C36 16,18 10,10 18 C2 26,6 38,18 40 C30 42,40 32,45 27 C50 22,60 12,72 14 C84 16,88 28,80 36 C72 44,54 38,45 27 Z"
+              stroke="#2a7ec8" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+          </svg>
+          <div class="hd-name">The Good Mark</div>
+        </div>
+        <p>Las pantallas también celebran el deporte. Así se ve la publicidad cuando conecta con la gente.</p>
+      </div>
+      <button class="btn btn-primary" onclick="resetToIdle()">Jugar de nuevo</button>
+    </section>
+
+  </main>
+
+  <footer><strong>The Good Mark</strong> · Reto Mundialista</footer>
+</div>
+
+<script>
+// ── 7 PREGUNTAS DE COPA DEL MUNDO (nivel medio, verificadas, sin hechos posteriores a 2022) ──
+const QUESTIONS = [
+  {
+    question: "El primer Mundial de la historia, en 1930, se jugó en Uruguay y el anfitrión se coronó campeón.",
+    answer: true,
+    fact: "Uruguay venció a Argentina 4-2 en la final y ganó la primera Copa del Mundo jugando en casa."
+  },
+  {
+    question: "Alemania es el único país que ha ganado cuatro Copas del Mundo.",
+    answer: false,
+    fact: "Italia también tiene cuatro títulos. Brasil lidera la tabla histórica con cinco copas."
+  },
+  {
+    question: "Pelé es el único futbolista en la historia que ha ganado tres Copas del Mundo.",
+    answer: true,
+    fact: "Lo logró con Brasil en 1958, 1962 y 1970, una marca que nadie más ha igualado."
+  },
+  {
+    question: "En el Mundial de 2014, Alemania venció a Brasil 7-1 en semifinales, disputado en territorio brasileño.",
+    answer: true,
+    fact: "El partido se jugó en Belo Horizonte y se conoce como el 'Mineirazo', la peor derrota mundialista de Brasil."
+  },
+  {
+    question: "Argentina ganó su primera Copa del Mundo en México 1986, con Diego Maradona como capitán.",
+    answer: false,
+    fact: "Su primer título fue en 1978, jugando como anfitrión. El de 1986 con Maradona fue su segunda estrella."
+  },
+  {
+    question: "Sudáfrica 2010 fue el primer Mundial disputado en el continente africano.",
+    answer: true,
+    fact: "España se coronó campeona por primera vez en esa edición, venciendo a Países Bajos en la final."
+  },
+  {
+    question: "La tanda de penales se ha usado para definir partidos del Mundial desde su primera edición en 1930.",
+    answer: false,
+    fact: "La final de 1994, entre Brasil e Italia, fue la primera final de un Mundial decidida por penales."
+  }
+];
+
+// ── ESTADO DEL JUEGO ──
+let currentIndex = 0;
+let correctCount = 0;
+let marked = null;
+let timerInterval = null;
+let timeLeft = 0;
+const TIMER_TOTAL = 12; // configurable 10–15
+const DANGER_AT = 4;
+
+// ── NAVEGACIÓN DE PANTALLAS ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  resetIdleTimer();
+}
+
+// ── DOTS DE PROGRESO (header) ──
+function updateDots() {
+  const c = document.getElementById('pdots');
+  c.innerHTML = '';
+  QUESTIONS.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'pd' + (i < currentIndex ? ' done' : '') + (i === currentIndex ? ' current' : '');
+    c.appendChild(d);
+  });
+}
+
+// ── INICIO DE JUEGO ──
+function startGame() {
+  currentIndex = 0;
+  correctCount = 0;
+  showScreen('screen-game');
+  loadQuestion(currentIndex);
+}
+
+function loadQuestion(idx) {
+  const q = QUESTIONS[idx];
+  document.getElementById('q-counter').innerHTML = `Pregunta <span>${idx + 1}</span> de ${QUESTIONS.length}`;
+  document.getElementById('bb-question-text').textContent = q.question;
+  updateDots();
+  startTimer();
+}
+
+// ── CUENTA REGRESIVA ──
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft = TIMER_TOTAL;
+  updateTimerUI();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerUI();
+    if (timeLeft <= 0) { clearInterval(timerInterval); revealAnswer(); }
+  }, 1000);
+}
+
+function updateTimerUI() {
+  const pct = Math.max(0, (timeLeft / TIMER_TOTAL) * 100);
+  const bar = document.getElementById('timer-bar');
+  const num = document.getElementById('timer-num');
+  const danger = timeLeft <= DANGER_AT;
+  bar.style.width = pct + '%';
+  bar.className = 'timer-bar' + (danger ? ' danger' : '');
+  num.textContent = Math.max(timeLeft, 0);
+  num.className = 'timer-num' + (danger ? ' danger' : '');
+}
+
+// ── REVELACIÓN ──
+function revealAnswer() {
+  clearInterval(timerInterval);
+  const q = QUESTIONS[currentIndex];
+  const answerEl = document.getElementById('reveal-answer');
+  answerEl.textContent = q.answer ? 'VERDADERO' : 'FALSO';
+  answerEl.style.color = q.answer ? 'var(--green)' : 'var(--red)';
+  document.getElementById('reveal-fact').innerHTML = `<strong>Dato curioso:</strong> ${q.fact}`;
+  resetMarkButtons();
+  const isLast = currentIndex === QUESTIONS.length - 1;
+  document.getElementById('btn-next-reveal').textContent = isLast ? 'Ver resultado →' : 'Siguiente pregunta →';
+  showScreen('screen-reveal');
+  fireworks(q.answer ? '#22c55e' : '#E03C31');
+}
+
+function resetMarkButtons() {
+  marked = null;
+  const okBtn = document.getElementById('btn-mark-correct');
+  const noBtn = document.getElementById('btn-mark-wrong');
+  okBtn.disabled = false; noBtn.disabled = false;
+  okBtn.classList.remove('selected'); noBtn.classList.remove('selected');
+  document.getElementById('btn-next-reveal').disabled = true;
+}
+
+function markResult(isCorrect) {
+  if (marked !== null) return;
+  marked = isCorrect;
+  if (isCorrect) correctCount++;
+  document.getElementById('btn-mark-correct').disabled = true;
+  document.getElementById('btn-mark-wrong').disabled = true;
+  document.getElementById('btn-mark-correct').classList.toggle('selected', isCorrect === true);
+  document.getElementById('btn-mark-wrong').classList.toggle('selected', isCorrect === false);
+  document.getElementById('btn-next-reveal').disabled = false;
+}
+
+function goNext() {
+  currentIndex++;
+  if (currentIndex >= QUESTIONS.length) { showFinal(); }
+  else { showScreen('screen-game'); loadQuestion(currentIndex); }
+}
+
+// ── PANTALLA FINAL ──
+function showFinal() {
+  const total = QUESTIONS.length;
+  document.getElementById('final-score').innerHTML = `${correctCount}<span>de ${total} correctas</span>`;
+  const pct = correctCount / total;
+  const msg = pct >= 0.85
+    ? "¡Equipo campeón! Leyeron el Mundial como profesionales."
+    : pct >= 0.5
+    ? "Buen partido. Todavía queda tiempo extra para seguir aprendiendo de Mundiales."
+    : "El marcador no lo dice todo — lo importante es que brincaron, gritaron y se divirtieron.";
+  document.getElementById('final-msg').textContent = msg;
+  showScreen('screen-final');
+  fireworks('#f0c040');
+}
+
+function resetToIdle() {
+  clearInterval(timerInterval);
+  currentIndex = 0;
+  correctCount = 0;
+  showScreen('screen-idle');
+}
+
+// ── RESET POR INACTIVIDAD (25 seg desde cualquier pantalla distinta a la de espera) ──
+const IDLE_MS = 25000;
+let idleTimer = null;
+
+function resetIdleTimer() {
+  clearTimeout(idleTimer);
+  if (!document.getElementById('screen-idle').classList.contains('active')) {
+    idleTimer = setTimeout(resetToIdle, IDLE_MS);
+  }
+}
+
+['touchstart', 'click', 'keydown', 'mousedown'].forEach(evt =>
+  document.addEventListener(evt, resetIdleTimer, { passive: true })
+);
+
+// ── CONFETI / FUEGOS ARTIFICIALES (idéntico al sistema) ──
+function fireworks(accent) {
+  const cv = document.getElementById('confetti');
+  if (!cv) return;
+  const cx = cv.getContext('2d');
+  cv.width = window.innerWidth;
+  cv.height = window.innerHeight;
+  const colors = [accent, '#1461a1', '#ffffff', '#f0c040', '#2a7ec8'];
+  const ps = Array.from({ length: 120 }, () => ({
+    x: Math.random() * cv.width, y: -20,
+    w: Math.random() * 14 + 5, h: Math.random() * 7 + 3,
+    c: colors[Math.floor(Math.random() * colors.length)],
+    rot: Math.random() * 360,
+    vx: (Math.random() - .5) * 5,
+    vy: Math.random() * 5 + 3,
+    vr: (Math.random() - .5) * 7,
+  }));
+  let f = 0;
+  (function draw() {
+    cx.clearRect(0, 0, cv.width, cv.height);
+    ps.forEach(p => {
+      cx.save(); cx.translate(p.x, p.y); cx.rotate(p.rot * Math.PI / 180);
+      cx.fillStyle = p.c; cx.globalAlpha = Math.max(0, 1 - f / 85);
+      cx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); cx.restore();
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.vy += 0.14;
+    });
+    f++;
+    if (f < 90) requestAnimationFrame(draw);
+    else cx.clearRect(0, 0, cv.width, cv.height);
+  })();
+}
+
+// ── INICIO ──
+showScreen('screen-idle');
+</script>
+</body>
+</html>
