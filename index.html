@@ -309,7 +309,6 @@ const DANGER_AT = 4;
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  resetIdleTimer();
 }
 
 // ── DOTS DE PROGRESO (header) ──
@@ -424,21 +423,6 @@ function resetToIdle() {
   correctCount = 0;
   showScreen('screen-idle');
 }
-
-// ── RESET POR INACTIVIDAD (25 seg desde cualquier pantalla distinta a la de espera) ──
-const IDLE_MS = 25000;
-let idleTimer = null;
-
-function resetIdleTimer() {
-  clearTimeout(idleTimer);
-  if (!document.getElementById('screen-idle').classList.contains('active')) {
-    idleTimer = setTimeout(resetToIdle, IDLE_MS);
-  }
-}
-
-['touchstart', 'click', 'keydown', 'mousedown'].forEach(evt =>
-  document.addEventListener(evt, resetIdleTimer, { passive: true })
-);
 
 // ── CONFETI / FUEGOS ARTIFICIALES (idéntico al sistema) ──
 function fireworks(accent) {
